@@ -132,4 +132,10 @@ setup(
     # Similar to `install_requires` above, these must be valid existing
     # projects.
     # extras_require={ } # Optional,
+entry_points={
+    'console_scripts': [
+        'macrostrat = macrostratpy:macrostrat_cli',
+    ],
+},
+
 )
