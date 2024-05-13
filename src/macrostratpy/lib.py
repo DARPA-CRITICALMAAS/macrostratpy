@@ -14,6 +14,7 @@ from shapely.geometry import shape, mapping, Polygon
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from shapely import to_geojson
+import platformdirs
 
 
 
@@ -357,6 +358,7 @@ def dissolve_vector_files_by_property(
     Returns nothing (output is written to file)
 
     """
+    output_file = Path(output_file)
 
     if not vector_files:
         print('No vector data to dissolve, skipping...')
@@ -439,6 +441,10 @@ def dissolve_vector_files_by_property(
     # handle cases where adjacent tile coords don't line up precisely
     gtype = [x for x in valid_geom_types if 'Multi' in x][0]
     meta['schema']['geometry'] = gtype  # 'MultiPolygon'
+    # Save the GeoJSON to file
+    if not output_file.exists():
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
     with fiona.open(output_file, 'w', **meta) as output:
         for feature in features_new:
             output.write(feature)
@@ -450,8 +456,9 @@ def macrostrat_from_bounds(bounds, output_path, zoom_level=10):
     print("Now downloading Macrostrat data")
     mapbox_tiles = download_tiles(tile_indices, "https://dev.macrostrat.org/tiles/", "carto")
 
-    print("Now converting from Mapbox to json")
-    js_paths = process_tiles(mapbox_tiles, tile_indices, Path(output_path).parent, "units", 4096)
+    js_download_loc = platformdirs.user_cache_dir()
+    print(f"Now converting from Mapbox to json. Intermediate files stored at {js_download_loc}")
+    js_paths = process_tiles(mapbox_tiles, tile_indices, js_download_loc, "units", 4096)
 
     print("Now dissolving tiles")
     dissolve_vector_files_by_property(
