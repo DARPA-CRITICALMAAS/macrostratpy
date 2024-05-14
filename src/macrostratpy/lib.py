@@ -18,7 +18,7 @@ import platformdirs
 
 
 
-def download_tiles(tile_indices, tileserver, service):
+def download_tiles(tile_indices, tileserver, service, params=''):
     r"""
     Download Mapbox tiles from a particular tile server. Defaults to Macrostrat
     using the ``carto`` service.
@@ -66,11 +66,17 @@ def download_tiles(tile_indices, tileserver, service):
     """
     mapbox_tiles = []
     base_url = urljoin(tileserver, service) + "/"
+    param_str = ''
+    if params:
+        param_str = params
+        #param_str = '?'
+        #param_str += '&'.join([f'{k}={str(v)}' for k,v in params.items()])
+
     for tile_index in tile_indices:
         tile_str = [str(x) for x in tile_index]
 
         # Set URL of the tile to be downloaded
-        url = urljoin(base_url, "/".join(tile_str))
+        url = urljoin(base_url, "/".join(tile_str), param_str)
         # TODO: use urllib instead of pathlib
 
         # Retrieve tile from URL
@@ -114,9 +120,12 @@ def decode_protobuf_to_geojson_wgs84(tile, layername, bounds, tilesize):
 
     # Decode to dict and pull out the GeoJSON for the target layer
     data_decoded = mapbox_vector_tile.decode(tile)
+    #print(data_decoded)
+    #print(list(data_decoded.keys()))
     if layername not in data_decoded:
         print(f'\t\tLayer name "{layername}" not present in this data. Skipping...')
         return None
+
 
     data = data_decoded[layername]
 
@@ -385,6 +394,14 @@ def dissolve_vector_files_by_property(
     # Sort the features by the property
     e = sorted(features, key=lambda k: k['properties'][property_name])
 
+    # Get common properties; this is required b/c schema's must match;
+    # there are some services that return features w/ property schemas that vary
+    property_set = set(list(e[0]['properties'].keys()))
+    for feature in e:
+        property_set = property_set & set(list(feature['properties'].keys()))
+    #property_schema =
+
+
     # Loop through and combine geometry features by group property
     features_new = []  # var to store the dissolved features
     for key, group in itertools.groupby(
@@ -431,7 +448,7 @@ def dissolve_vector_files_by_property(
             # Store newly created dissolved features
             features_new.append({
                 'geometry': g0,
-                'properties': properties[0]
+                'properties': {p: properties[0][p] for p in property_set}
             })
 
             # Store type for writing output
@@ -450,20 +467,26 @@ def dissolve_vector_files_by_property(
             output.write(feature)
 
 
-def macrostrat_from_bounds(bounds, output_path, layername, zoom_level=10, ):
+def macrostrat_from_bounds(
+        bounds, output_path, layername,
+        params = '',
+        zoom_level=10,
+        macrostrat_server=  "https://dev.macrostrat.org/tiles/",
+        service = "carto",
+    ):
     tile_indices = get_tiles_for_ll_bounds(**bounds, zoom_level=zoom_level)
 
     print("Now downloading Macrostrat data")
 
     # mapbox_tiles = download_tiles(tile_indices, "https://tileserver.development.svc.macrostrat.org/map/8/62/88?source_id=1724", "carto")
-    mapbox_tiles = download_tiles(tile_indices, "https://dev.macrostrat.org/tiles/", "carto")
+    mapbox_tiles = download_tiles(tile_indices, macrostrat_server, service, params)
 
     js_download_loc = platformdirs.user_cache_dir()
     print(f"Now converting from Mapbox to json. Intermediate files stored at {js_download_loc}")
     js_paths = process_tiles(mapbox_tiles, tile_indices, js_download_loc, layername, 4096)
 
     print("Now dissolving tiles")
-    if layername.casefold() == "unit".casefold():
+    if layername.casefold() == "units".casefold():
         dissolve_vector_files_by_property(
             js_paths,
             'map_id',
@@ -480,4 +503,4 @@ def macrostrat_from_bounds(bounds, output_path, layername, zoom_level=10, ):
             **bounds
         )
     else:
-        raise ValueError('layername must be either unit or line')
+        raise ValueError('layername must be either units or line')

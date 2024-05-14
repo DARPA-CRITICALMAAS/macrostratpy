@@ -41,6 +41,17 @@ def test_macrostrat_from_bounds():
     output_filename = platformdirs.user_data_path() / "hackathon_month9" / "ta1_map_units.json"
     layername="units"
     zoom_level=6
-    macrostrat_from_bounds(bounds=bounds, output_path=output_filename, layername=layername, zoom_level=zoom_level)
+
+    macrostrat_from_bounds(
+        bounds = bounds,
+        output_path=output_filename,
+        layername=layername,
+        macrostrat_server='https://tileserver.development.svc.macrostrat.org/v2/',
+        service = 'maps',
+        params = 'lithology=siliciclastic&lithology=gravel',
+        zoom_level=zoom_level,
+    )
+
+    #macrostrat_from_bounds(bounds=bounds, output_path=output_filename, layername=layername, zoom_level=zoom_level)
 if __name__ == "__main__":
     test_macrostrat_from_bounds()
