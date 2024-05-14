@@ -450,21 +450,34 @@ def dissolve_vector_files_by_property(
             output.write(feature)
 
 
-def macrostrat_from_bounds(bounds, output_path, zoom_level=10):
+def macrostrat_from_bounds(bounds, output_path, layername, zoom_level=10, ):
     tile_indices = get_tiles_for_ll_bounds(**bounds, zoom_level=zoom_level)
 
     print("Now downloading Macrostrat data")
+
+    # mapbox_tiles = download_tiles(tile_indices, "https://tileserver.development.svc.macrostrat.org/map/8/62/88?source_id=1724", "carto")
     mapbox_tiles = download_tiles(tile_indices, "https://dev.macrostrat.org/tiles/", "carto")
 
     js_download_loc = platformdirs.user_cache_dir()
     print(f"Now converting from Mapbox to json. Intermediate files stored at {js_download_loc}")
-    js_paths = process_tiles(mapbox_tiles, tile_indices, js_download_loc, "units", 4096)
+    js_paths = process_tiles(mapbox_tiles, tile_indices, js_download_loc, layername, 4096)
 
     print("Now dissolving tiles")
-    dissolve_vector_files_by_property(
-        js_paths,
-        'map_id',
-        ['Polygon', 'MultiPolygon'],
-        output_path,
-        **bounds
-    )
+    if layername.casefold() == "unit".casefold():
+        dissolve_vector_files_by_property(
+            js_paths,
+            'map_id',
+            ['Polygon', 'MultiPolygon'],
+            output_path,
+            **bounds
+        )
+    elif layername.casefold() == "lines".casefold():
+        dissolve_vector_files_by_property(
+            js_paths,
+            'line_id',
+            ['LineString', 'MultiLineString'],
+            output_path,
+            **bounds
+        )
+    else:
+        raise ValueError('layername must be either unit or line')
