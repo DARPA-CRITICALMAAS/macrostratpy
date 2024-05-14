@@ -80,7 +80,7 @@ def download_tiles(tile_indices, tileserver, service, params=''):
         url = urljoin(base_url, "/".join(tile_str), param_str)
         url += param_str
         # TODO: use urllib instead of pathlib
-        #print(url,params,param_str)
+        #print(url)
         # Retrieve tile from URL
         mapbox_tile = requests.get(url).content
         mapbox_tiles.append(mapbox_tile)
