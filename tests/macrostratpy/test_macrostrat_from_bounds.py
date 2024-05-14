@@ -47,8 +47,8 @@ def test_macrostrat_from_bounds():
         output_path=output_filename,
         layername=layername,
         macrostrat_server='https://tileserver.development.svc.macrostrat.org/v2/',
-        service = 'maps',
-        params = 'lithology=siliciclastic&lithology=gravel',
+        service = 'maps',#'maps',
+        params = 'source_id=1724',#'lithology=siliciclastic&lithology=gravel',
         zoom_level=zoom_level,
     )
 

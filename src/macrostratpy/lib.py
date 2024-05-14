@@ -68,7 +68,8 @@ def download_tiles(tile_indices, tileserver, service, params=''):
     base_url = urljoin(tileserver, service) + "/"
     param_str = ''
     if params:
-        param_str = params
+        param_str = '?'
+        param_str += params
         #param_str = '?'
         #param_str += '&'.join([f'{k}={str(v)}' for k,v in params.items()])
 
@@ -77,8 +78,9 @@ def download_tiles(tile_indices, tileserver, service, params=''):
 
         # Set URL of the tile to be downloaded
         url = urljoin(base_url, "/".join(tile_str), param_str)
+        url += param_str
         # TODO: use urllib instead of pathlib
-
+        #print(url,params,param_str)
         # Retrieve tile from URL
         mapbox_tile = requests.get(url).content
         mapbox_tiles.append(mapbox_tile)
@@ -119,11 +121,13 @@ def decode_protobuf_to_geojson_wgs84(tile, layername, bounds, tilesize):
         ]
 
     # Decode to dict and pull out the GeoJSON for the target layer
+    #print(tile)
     data_decoded = mapbox_vector_tile.decode(tile)
     #print(data_decoded)
     #print(list(data_decoded.keys()))
     if layername not in data_decoded:
         print(f'\t\tLayer name "{layername}" not present in this data. Skipping...')
+        print(f'\t\tAvailable layernames: {list(data_decoded.keys())}')
         return None
 
 
@@ -398,8 +402,9 @@ def dissolve_vector_files_by_property(
     # there are some services that return features w/ property schemas that vary
     property_set = set(list(e[0]['properties'].keys()))
     for feature in e:
+        #property_schema += list(feature['properties'].keys())
         property_set = property_set & set(list(feature['properties'].keys()))
-    #property_schema =
+    #property_schema = set(property_schema)
 
 
     # Loop through and combine geometry features by group property
@@ -446,6 +451,12 @@ def dissolve_vector_files_by_property(
                 g0['coordinates'] = [g0['coordinates']]
 
             # Store newly created dissolved features
+            # ps = {}
+            # for p in property_schema:
+            #     if p in properties[0]:
+            #         ps[p] = properties[0][p]
+            #     else:
+            #         ps[p] = None
             features_new.append({
                 'geometry': g0,
                 'properties': {p: properties[0][p] for p in property_set}
@@ -479,7 +490,7 @@ def macrostrat_from_bounds(
     print("Now downloading Macrostrat data")
 
     # mapbox_tiles = download_tiles(tile_indices, "https://tileserver.development.svc.macrostrat.org/map/8/62/88?source_id=1724", "carto")
-    mapbox_tiles = download_tiles(tile_indices, macrostrat_server, service, params)
+    mapbox_tiles = download_tiles(tile_indices, macrostrat_server, service, params=params)
 
     js_download_loc = platformdirs.user_cache_dir()
     print(f"Now converting from Mapbox to json. Intermediate files stored at {js_download_loc}")
